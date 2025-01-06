@@ -6,15 +6,21 @@ import random
 import wikipedia
 import time
 import sys
-
+import pygame
+from playsound import playsound
+import os
 from joke import tell_joke
-
+from play_music import play_music
+from COMMANDS import *
 
 # Ключевые слова для активации
 TRIGGER_WORD = "настя"
 STOP_COMMAND = "остановись"
 
-import pygame
+# Укажите индекс микрофона (проверьте список доступных микрофонов)
+MICROPHONE_INDEX = 3  # Замените на ваш индекс
+
+
 
 def speak(text, slow=False):
     """Озвучивает переданный текст с помощью gTTS."""
@@ -28,50 +34,20 @@ def speak(text, slow=False):
     pygame.mixer.quit()
 
 
+
+
 def use_command(recognized_text):
-    """Обрабатывает команды после распознавания текста."""
-    if recognized_text == "привет как дела":
-        response = "Все хорошо, хозяин!"
-        print(response)
-        speak(response)
-    elif recognized_text == "включи свет":
-        response = "Включаю свет"
-        print(response)
-        speak(response)
-    elif recognized_text == "выключи свет":
-        response = "Выключаю свет"
-        print(response)
-        speak(response)
-    elif recognized_text == "представься":
-        response = "Я слуга Михаила и служу ему!"
-        print(response)
-        speak(response)
-    elif recognized_text == "хозяйка пришла домой":
-        response = "Ура, я очень рада!"
-        print(response)
-        speak(response)
-    elif recognized_text == "какое сейчас время" or recognized_text == "сколько время":
-        response = get_current_time()
-        print(response)
-        speak(response)
-    elif recognized_text == "скажи шутку" or recognized_text == "расскажи шутку":
-        response = tell_joke()
-        print(response)
-        speak(response)
+    response = COMMANDS.get(recognized_text, None)
+    if response:
+        response_text = response()
     elif "википедия" in recognized_text:
         query = recognized_text.replace("википедия", "").strip()
-        response = search_wikipedia(query)
-        print(response)
-        speak(response)
+        response_text = search_wikipedia(query)
     else:
-        response = f"Команда не распознана: {recognized_text}"
-        print(response)
-        speak(response)
+        response_text = f"Команда не распознана: {recognized_text}"
+    print(response_text)
+    speak(response_text)
 
-def get_current_time():
-    """Возвращает текущее время."""
-    now = datetime.datetime.now()
-    return f"Сейчас {now.strftime('%H:%M:%S')}."
 
 def search_wikipedia(query):
     """Ищет информацию на Wikipedia на русском языке."""
@@ -80,7 +56,7 @@ def search_wikipedia(query):
         if not query:
             return "Вы не указали, что искать в Википедии. Попробуйте снова."
         result = wikipedia.summary(query, sentences=2)
-        return f"Вот что я нашел: {result}"
+        return f"Вот что я нашела: {result}"
     except wikipedia.exceptions.DisambiguationError as e:
         options = ", ".join(e.options[:5])  # Показываем только первые 5 вариантов
         return f"Ваш запрос слишком общий. Возможно, вы имели в виду: {options}."
@@ -94,7 +70,8 @@ def search_wikipedia(query):
 def listen_for_command():
     """Постоянно слушает и ждет ключевую команду."""
     recognizer = sr.Recognizer()
-    with sr.Microphone() as source:
+    with sr.Microphone(device_index=MICROPHONE_INDEX) as source:
+        print(f"Используется микрофон: {sr.Microphone.list_microphone_names()[MICROPHONE_INDEX]}")
         print("Ожидание команды...")
         while True:
             try:
@@ -105,7 +82,26 @@ def listen_for_command():
 
                 if TRIGGER_WORD in command:
                     print("Ключевое слово распознано! Жду следующую команду.")
-                    speak("Да, я слушаю")
+                    soglasye = [
+                        "Да, я слушаю",
+                        "Да?",
+                        "УГУ?",
+                        "Слушаю?",
+                        "Ваши указания?",
+                        "Да, я тут.",
+                        "Слушаю внимательно.",
+                        "Что вы хотите?",
+                        "Я здесь, говорите.",
+                        "Что нужно?",
+                        "Да.",
+                        "Я тут.",       
+                        "Говорите.",
+                        "Что?",
+                        "Я здесь.",
+                        "Да-да.",
+                        "Слушаю вас."                    
+                    ]
+                    speak(random.choice(soglasye))
                     listen_and_process_command()
                 elif STOP_COMMAND in command:
                     print("Команда на завершение работы распознана. Отключаюсь.")
@@ -122,10 +118,9 @@ def listen_for_command():
 def listen_and_process_command():
     """Слушает пользователя и передает команду на обработку."""
     recognizer = sr.Recognizer()
-    with sr.Microphone() as source:
+    with sr.Microphone(device_index=MICROPHONE_INDEX) as source:
         print("Говорите вашу команду:")
         try:
-            # Слушаем пользователя
             audio = recognizer.listen(source, timeout=10, phrase_time_limit=10)
             recognized_text = recognizer.recognize_google(audio, language="ru-RU").lower()
             print(f"Распознанный текст: {recognized_text}")
@@ -144,4 +139,8 @@ def listen_and_process_command():
             speak("Произошла ошибка.")
 
 if __name__ == "__main__":
+    print("Доступные микрофоны:")
+    for index, name in enumerate(sr.Microphone.list_microphone_names()):
+        print(f"{index}: {name}")
+
     listen_for_command()
